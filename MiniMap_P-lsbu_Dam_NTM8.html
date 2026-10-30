@@ -141,6 +141,13 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
         <option value="kv_gray">Kartverket gråtone (WMTS)</option>
         <option value="kv_raster">Kartverket raster (WMTS)</option>
         <option value="wms_fkb">Kartverket FKB (WMS)</option>
+        <optgroup label="NVE – Vannkraft (WMS)">
+          <option value="nve_all">NVE – Vannkraftverk, Vannvei, Dam og Magasin</option>
+          <option value="nve_power">NVE – Vannkraftverk</option>
+          <option value="nve_waterway">NVE – Vannvei</option>
+          <option value="nve_dam">NVE – Dam</option>
+          <option value="nve_reservoir">NVE – Magasin</option>
+        </optgroup>
         <option value="google_sat">Google ortofoto</option>
         <option value="google_hybrid">Google hybrid</option>
         <option value="wms_custom">Egen WMS</option>
@@ -315,6 +322,15 @@ function toggleRows(key){
   $('fkbRow')?.classList.toggle('show',key==='wms_fkb');
   $('wmsRow')?.classList.toggle('show',key==='wms_custom');
 }
+const NVE_WMS_URL='https://kart.nve.no/enterprise/services/Vannkraft1/MapServer/WMSServer';
+const NVE_WMS_LAYERS={nve_all:'0,4,5,6',nve_power:'0',nve_waterway:'4',nve_dam:'5',nve_reservoir:'6'};
+function makeNveLayer(key){
+  return L.tileLayer.wms(NVE_WMS_URL,{
+    layers:NVE_WMS_LAYERS[key],format:'image/png',transparent:true,
+    version:'1.3.0',crs:L.CRS.EPSG3857,maxZoom:22,opacity:0.95,
+    attribution:'© Norges vassdrags- og energidirektorat (NVE)'
+  });
+}
 function setBaseLayer(key){
   if(!map)return;
   if(baseLayer){try{map.removeLayer(baseLayer);}catch(e){}}
@@ -333,6 +349,13 @@ function setBaseLayer(key){
     google_hybrid:()=>L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:22,attribution:'© Google'})
   };
 
+  if(Object.prototype.hasOwnProperty.call(NVE_WMS_LAYERS,key)){
+    baseLayer=base.kv_topo().addTo(map);
+    customWmsLayer=makeNveLayer(key);
+    customWmsLayer.on('tileerror',()=>toast('NVE WMS kunne ikke laste kartfliser. Sjekk WMS-tjenesten og lagnavn.',5000));
+    customWmsLayer.addTo(map);
+    return;
+  }
   if(key==='wms_fkb'){
     baseLayer=base.google_sat().addTo(map);
     fillFkbLayerSelect(FKB_FALLBACK_LAYERS);
