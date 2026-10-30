@@ -323,7 +323,7 @@ function toggleRows(key){
   $('wmsRow')?.classList.toggle('show',key==='wms_custom');
 }
 const NVE_WMS_URL='https://kart.nve.no/enterprise/services/Vannkraft1/MapServer/WMSServer';
-const NVE_WMS_LAYERS={nve_all:'0,4,5,6',nve_power:'0',nve_waterway:'4',nve_dam:'5',nve_reservoir:'6'};
+const NVE_WMS_LAYERS={nve_all:'Vannkraftverk,Vannvei,Dam,Magasin',nve_power:'Vannkraftverk',nve_waterway:'Vannvei',nve_dam:'Dam',nve_reservoir:'Magasin'};
 function makeNveLayer(key){
   return L.tileLayer.wms(NVE_WMS_URL,{
     layers:NVE_WMS_LAYERS[key],format:'image/png',transparent:true,
@@ -352,7 +352,8 @@ function setBaseLayer(key){
   if(Object.prototype.hasOwnProperty.call(NVE_WMS_LAYERS,key)){
     baseLayer=base.kv_topo().addTo(map);
     customWmsLayer=makeNveLayer(key);
-    customWmsLayer.on('tileerror',()=>toast('NVE WMS kunne ikke laste kartfliser. Sjekk WMS-tjenesten og lagnavn.',5000));
+    let nveErrorShown=false;
+    customWmsLayer.on('tileerror',(e)=>{if(!nveErrorShown){nveErrorShown=true;console.error('NVE WMS kartflis feilet',e);toast('NVE WMS kunne ikke laste kartfliser. Kontroller WMS-tjenesten eller prøv igjen.',5000);}});
     customWmsLayer.addTo(map);
     return;
   }
