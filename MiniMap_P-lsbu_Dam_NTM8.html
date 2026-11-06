@@ -48,7 +48,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 .mini-sel{min-width:230px;flex:1}
 .wms-url{min-width:280px;flex:3}.wms-layer{min-width:150px;flex:1}.fkb-layer{min-width:290px;flex:2}
 .wms-row,.fkb-row{display:none}.wms-row.show,.fkb-row.show{display:flex}
-.btn{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 12px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-size:12px;font-weight:750;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:background .15s,border-color .15s,transform .08s,box-shadow .15s}
+.btn{text-decoration:none;height:34px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 12px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-size:12px;font-weight:750;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:background .15s,border-color .15s,transform .08s,box-shadow .15s}
 .btn:hover{background:#f7faff;border-color:#a9bdd3;box-shadow:0 3px 10px rgba(15,23,42,.07)}
 .btn:active{transform:translateY(1px)}
 .btn.primary{margin-left:auto;background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 5px 14px rgba(0,87,184,.22)}
@@ -129,7 +129,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
     <div class="row">
       <button id="centerCamera" class="btn" title="Sentrer kartet på kameraet">⌖ Sentrer</button>
       <button id="followBtn" class="btn active" title="Følg kameraet automatisk">● Følg kamera</button>
-      <button id="streetViewBtn" class="btn" title="Åpne Google Street View i ny fane">Street View ↗</button>
+      <a id="streetViewBtn" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" class="btn" title="Åpne Google Street View i ny fane">Street View ↗</a>
       <button id="configBtn" class="btn primary" title="Fast prosjektsystem">EPSG:5108</button>
     </div>
     <div class="row">
@@ -592,7 +592,16 @@ function renderSection(){
 }
 async function initTrimble(){try{API=await TrimbleConnectWorkspace.connect(window.parent,(event,args)=>{const ev=String(event).toLowerCase();if(ev.includes('camera')||ev.includes('view'))parseCamera(args?.data??args?.camera??args);});setStatus('live','Trimble tilkoblet');await safe(()=>API.viewer?.subscribeToCamera?.());await safe(()=>API.viewer?.enableCameraEvents?.());pollTimer=setInterval(pollCamera,700);pollCamera();}catch(e){console.error(e);setStatus('error','Trimble ikke tilkoblet');toast('Trimble Connect API ikke tilgjengelig');}}
 async function onMapClick(e){if(!$('clickMove')?.checked||!API||!hasCamera)return;const target=latLngToModel(e.latlng);const cam={position:{x:target.x,y:target.y,z:target.z},direction:camDir};let ok=false;const calls=[()=>API.viewer?.setCamera?.(cam),()=>API.viewer?.camera?.setCamera?.(cam),()=>API.viewer?.setView?.({camera:cam}),()=>API.viewer?.moveCamera?.(cam)];for(const c of calls){const r=await safe(c);if(r!==null){ok=true;break;}}camPos=target;updateCamera();toast(ok?'Kamera flyttet til NTM8-posisjon':'Kartposisjon beregnet, men Trimble API støtter ikke kameraflytting her');}
-function openStreetView(){const ll=hasCamera?modelToLatLng(camPos.x,camPos.y):map?.getCenter();if(!ll){toast('Ingen kartposisjon tilgjengelig');return;}const url=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ll.lat.toFixed(7)},${ll.lng.toFixed(7)}&heading=${Math.round(headingDeg())}&pitch=0&fov=80`;const w=window.open(url,'_blank','noopener,noreferrer');toast(w?'Åpner Google Street View i ny fane':'Nettleseren blokkerte ny fane.');}
+function openStreetView(event){
+  const ll=hasCamera?modelToLatLng(camPos.x,camPos.y):map?.getCenter();
+  if(!ll||!Number.isFinite(ll.lat)||!Number.isFinite(ll.lng)){
+    event.preventDefault();
+    toast('Ingen gyldig kartposisjon tilgjengelig');
+    return;
+  }
+  const url=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ll.lat.toFixed(7)},${ll.lng.toFixed(7)}&heading=${Math.round(headingDeg())}&pitch=0&fov=80`;
+  event.currentTarget.href=url;
+}
 function wireUI(){
   $('centerCamera').onclick=()=>{if(hasCamera&&map)map.setView(modelToLatLng(camPos.x,camPos.y),Math.max(map.getZoom(),18));};
   $('followBtn').onclick=()=>{followCamera=!followCamera;$('followBtn').classList.toggle('active',followCamera);if(followCamera)$('centerCamera').click();};
